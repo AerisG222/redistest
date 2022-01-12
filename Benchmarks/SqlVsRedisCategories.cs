@@ -3,10 +3,10 @@ using BenchmarkDotNet.Engines;
 using redistest.Sql;
 using redistest.Redis;
 
-namespace redistest;
+namespace redistest.Benchmarks;
 
 [MinColumn, MaxColumn]
-public class SqlVsRedis
+public class SqlVsRedisCategories
 {
     readonly Consumer _consumer = new Consumer();
     readonly PhotoRepository _sql = new PhotoRepository(Environment.GetEnvironmentVariable("MAW_API_Environment__DbConnectionString"));

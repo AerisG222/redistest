@@ -34,6 +34,11 @@ public class PhotoRepository
         });
     }
 
+    public Task<IEnumerable<Photo>> GetPhotosForCategoryAsync(short categoryId, string[] roles)
+    {
+        return InternalGetPhotosAsync(roles, categoryId);
+    }
+
     Task<IEnumerable<Category>> InternalGetCategoriesAsync(string[] roles, short? year = null, short? categoryId = null, short? sinceCategoryId = null)
     {
         return RunAsync(async conn =>
@@ -50,6 +55,24 @@ public class PhotoRepository
             ).ConfigureAwait(false);
 
             return rows.Select(BuildCategory);
+        });
+    }
+
+    Task<IEnumerable<Photo>> InternalGetPhotosAsync(string[] roles, short? categoryId = null, int? photoId = null)
+    {
+        return RunAsync(async conn =>
+        {
+            var rows = await conn.QueryAsync(
+                "SELECT * FROM photo.get_photos(@roles, @categoryId, @photoId);",
+                new
+                {
+                    roles,
+                    categoryId,
+                    photoId
+                }
+            ).ConfigureAwait(false);
+
+            return rows.Select(BuildPhoto);
         });
     }
 
@@ -78,5 +101,26 @@ public class PhotoRepository
         category.TeaserImageSq = BuildMultimediaInfo(row.teaser_photo_sq_path, row.teaser_photo_sq_width, row.teaser_photo_sq_height, row.teaser_photo_sq_size);
 
         return category;
+    }
+
+    Photo BuildPhoto(dynamic row)
+    {
+        var photo = new Photo();
+
+        photo.Id = (int)row.id;
+        photo.CategoryId = (short)row.category_id;
+        photo.CreateDate = GetValueOrDefault<DateTime>(row.create_date);
+        photo.Latitude = row.latitude;
+        photo.Longitude = row.longitude;
+
+        photo.XsInfo = BuildMultimediaInfo(row.xs_path, row.xs_width, row.xs_height, row.xs_size);
+        photo.XsSqInfo = BuildMultimediaInfo(row.xs_sq_path, row.xs_sq_width, row.xs_sq_height, row.xs_sq_size);
+        photo.SmInfo = BuildMultimediaInfo(row.sm_path, row.sm_width, row.sm_height, row.sm_size);
+        photo.MdInfo = BuildMultimediaInfo(row.md_path, row.md_width, row.md_height, row.md_size);
+        photo.LgInfo = BuildMultimediaInfo(row.lg_path, row.lg_width, row.lg_height, row.lg_size);
+        photo.PrtInfo = BuildMultimediaInfo(row.prt_path, row.prt_width, row.prt_height, row.prt_size);
+        photo.SrcInfo = BuildMultimediaInfo(row.src_path, row.src_width, row.src_height, row.src_size);
+
+        return photo;
     }
 }
