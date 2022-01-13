@@ -34,7 +34,7 @@ public class Program
         await redis.SetCategoriesAsync(categories, categoryRoles);
 
         Console.WriteLine("adding photos to redis...");
-        await redis.SetPhotosAsync(photos);
+        await redis.SetPhotosAsync(photos, categoryRoles);
 
         Console.WriteLine("test of getting first 10 categories from redis:");
         var redisCategories = await redis.GetCategoriesAsync(new[] {"friend", "demo"});
@@ -50,10 +50,17 @@ public class Program
             Console.WriteLine($"    - {photo.Id} : {photo.CategoryId} : {photo.XsInfo.Path}");
         }
 
-        Console.WriteLine("test of getting first 10 *random* photos from redis:");
+        Console.WriteLine("test of getting first 10 *random (naive)* photos from redis:");
         var redisRandomPhotos = await redis.GetRandomPhotosNaiveAsync(24, new[] {"friend", "demo"});
 
         foreach(var photo in redisRandomPhotos.Take(10)) {
+            Console.WriteLine($"    - {photo.Id} : {photo.CategoryId} : {photo.XsInfo.Path}");
+        }
+
+        Console.WriteLine("test of getting first 10 *random (optimized)* photos from redis:");
+        var redisRandomPhotosOptimized = await redis.GetRandomPhotosOptimizedAsync(24, new[] {"friend", "demo"});
+
+        foreach(var photo in redisRandomPhotosOptimized.Take(10)) {
             Console.WriteLine($"    - {photo.Id} : {photo.CategoryId} : {photo.XsInfo.Path}");
         }
 

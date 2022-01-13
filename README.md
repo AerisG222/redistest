@@ -38,8 +38,22 @@ AMD Ryzen 9 5950X, 1 CPU, 32 logical and 16 physical cores
   [Host]     : .NET 6.0.0 (6.0.21.52901), X64 RyuJIT
   DefaultJob : .NET 6.0.0 (6.0.21.52901), X64 RyuJIT
 
+|     Method |      Mean |    Error |   StdDev |       Min |       Max |
+|----------- |----------:|---------:|---------:|----------:|----------:|
+|   QuerySql | 146.30 ms | 1.348 ms | 1.261 ms | 143.13 ms | 148.25 ms |
+| QueryRedis |  24.05 ms | 0.061 ms | 0.057 ms |  23.94 ms |  24.15 ms |
 
-|     Method |     Mean |    Error |    StdDev |      Min |      Max |
-|----------- |---------:|---------:|----------:|---------:|---------:|
-|   QuerySql | 160.4 ms |  1.12 ms |   1.04 ms | 158.8 ms | 162.5 ms |
-| QueryRedis | 482.3 ms | 45.59 ms | 134.42 ms | 242.8 ms | 689.3 ms |
+## Random Photos (optimized)
+
+This performs some initial storage of which photos are accessible by which roles
+
+BenchmarkDotNet=v0.13.1, OS=fedora 35
+AMD Ryzen 9 5950X, 1 CPU, 32 logical and 16 physical cores
+.NET SDK=6.0.100
+  [Host]     : .NET 6.0.0 (6.0.21.52901), X64 RyuJIT
+  DefaultJob : .NET 6.0.0 (6.0.21.52901), X64 RyuJIT
+
+|     Method |      Mean |    Error |   StdDev |       Min |       Max |
+|----------- |----------:|---------:|---------:|----------:|----------:|
+|   QuerySql | 147.69 ms | 1.456 ms | 1.362 ms | 144.96 ms | 150.21 ms |
+| QueryRedis |  20.89 ms | 0.228 ms | 0.190 ms |  20.65 ms |  21.34 ms |

@@ -103,7 +103,7 @@ public class PhotoCategoryCache
         }
     }
 
-    public async Task SetPhotosAsync(IEnumerable<Photo> photos)
+    public async Task SetPhotosAsync(IEnumerable<Photo> photos, IEnumerable<CategoryRole> categoryRoles)
     {
         var db = _redis.GetDatabase();
 
@@ -113,6 +113,13 @@ public class PhotoCategoryCache
 
             tran.HashSetAsync(BuildPhotoHashKey(photo.Id), GetHashEntries(photo));
             tran.SetAddAsync(BuildCategoryPhotosSetKey(photo.CategoryId), photo.Id);
+
+            var roles = categoryRoles.Where(x => x.CategoryId == photo.CategoryId);
+
+            foreach(var role in roles)
+            {
+                tran.SetAddAsync(BuildPhotoRoleSetKey(role.Role), photo.Id);
+            }
 
             await tran.ExecuteAsync();
         }
@@ -215,6 +222,34 @@ public class PhotoCategoryCache
         return new List<Photo>();
     }
 
+    public async Task<IEnumerable<Photo>> GetRandomPhotosOptimizedAsync(short count, string[] roles)
+    {
+        var db = _redis.GetDatabase();
+        var tran = db.CreateTransaction();
+        var setKey = string.Empty;
+
+        if(roles.Length == 1)
+        {
+            setKey = BuildPhotoRoleSetKey(roles[0]);
+        }
+        else
+        {
+            setKey = BuildPhotoRoleSetKey(string.Join('+', roles));
+
+            tran.SetCombineAndStoreAsync(
+                SetOperation.Union,
+                setKey,
+                roles.Select(r => new RedisKey(BuildPhotoRoleSetKey(r))).ToArray()
+            );
+        }
+
+        var randomKeys = tran.SetRandomMembersAsync(setKey, count);
+
+        await tran.ExecuteAsync();
+
+        return await GetRandomPhotosFromSetAsync(await randomKeys);
+    }
+
     public async Task<IEnumerable<Photo>> GetRandomPhotosNaiveAsync(short count, string[] roles)
     {
         var db = _redis.GetDatabase();
@@ -243,9 +278,17 @@ public class PhotoCategoryCache
 
         await tran.ExecuteAsync();
 
-        tran = db.CreateTransaction();
+        return await GetRandomPhotosFromSetAsync(await randomKeys);
+    }
 
-        foreach(var photoKey in await randomKeys)
+    public async Task<IEnumerable<Photo>> GetRandomPhotosFromSetAsync(RedisValue[] randomKeys)
+    {
+        var db = _redis.GetDatabase();
+        var tran = db.CreateTransaction();
+
+        tran.KeyDeleteAsync(KEY_RANDOM_PHOTOS);
+
+        foreach(var photoKey in randomKeys)
         {
             tran.SetAddAsync(KEY_RANDOM_PHOTOS, photoKey);
         }
@@ -339,6 +382,11 @@ public class PhotoCategoryCache
     string BuildRoleSetKey(string role)
     {
         return $"{KEY_CATEGORY_ROOT}:role-items-{role}";
+    }
+
+    string BuildPhotoRoleSetKey(string role)
+    {
+        return $"{KEY_PHOTO_ROOT}:role-items-{role}";
     }
 
     string BuildCategoryPhotosSetKey(short categoryId)

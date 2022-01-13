@@ -6,7 +6,7 @@ using redistest.Redis;
 namespace redistest.Benchmarks;
 
 [MinColumn, MaxColumn]
-public class SqlVsRedisCategoryPhotos
+public class SqlVsRedisRandomPhotosOptimized
 {
     readonly Consumer _consumer = new Consumer();
     readonly PhotoRepository _sql = new PhotoRepository(Environment.GetEnvironmentVariable("MAW_API_Environment__DbConnectionString"));
@@ -14,8 +14,8 @@ public class SqlVsRedisCategoryPhotos
     readonly string[] _roles = new[] { "friend", "demo" };
 
     [Benchmark]
-    public async Task QuerySql() => (await _sql.GetPhotosForCategoryAsync(123, _roles)).Consume(_consumer);
+    public async Task QuerySql() => (await _sql.GetRandomAsync(24, _roles)).Consume(_consumer);
 
     [Benchmark]
-    public async Task QueryRedis() => (await _redis.GetPhotosAsync(123, _roles)).Consume(_consumer);
+    public async Task QueryRedis() => (await _redis.GetRandomPhotosOptimizedAsync(24, _roles)).Consume(_consumer);
 }

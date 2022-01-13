@@ -11,7 +11,7 @@ public class SqlVsRedisCategories
     readonly Consumer _consumer = new Consumer();
     readonly PhotoRepository _sql = new PhotoRepository(Environment.GetEnvironmentVariable("MAW_API_Environment__DbConnectionString"));
     readonly PhotoCategoryCache _redis = new PhotoCategoryCache("localhost:6379");
-    readonly string[] _roles = new[] { "friend", "admin" };
+    readonly string[] _roles = new[] { "friend", "demo" };
 
     [Benchmark]
     public async Task QuerySql() => (await _sql.GetCategoriesAsync(_roles)).Consume(_consumer);
