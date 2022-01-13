@@ -7,6 +7,8 @@ public class PhotoCategoryCache
 {
     const string KEY_PHOTO_ROOT = "maw:photos";
     const string KEY_CATEGORY_ROOT = "maw:photo-categories";
+    const string KEY_RANDOM_PHOTO_CANDIDATES = "maw:photos:random-candidates";
+    const string KEY_RANDOM_PHOTOS = "maw:photos:random";
     const string KEY_ALL_CATEGORIES = KEY_CATEGORY_ROOT + ":all-items";
 
     const string KEY_CAT_ID = "id";
@@ -211,6 +213,85 @@ public class PhotoCategoryCache
         }
 
         return new List<Photo>();
+    }
+
+    public async Task<IEnumerable<Photo>> GetRandomPhotosNaiveAsync(short count, string[] roles)
+    {
+        var db = _redis.GetDatabase();
+        var tran = db.CreateTransaction();
+        var accessibleCategoriesSetKey = await PrepareAccessibleCategoriesSetAsync(tran, roles);
+        var allCats = tran.SetMembersAsync(accessibleCategoriesSetKey);
+
+        await tran.ExecuteAsync();
+
+        var photoSetKeys = new List<string>();
+
+        foreach(var catId in await allCats)
+        {
+            photoSetKeys.Add(BuildCategoryPhotosSetKey((short)catId));
+        }
+
+        tran = db.CreateTransaction();
+
+        tran.SetCombineAndStoreAsync(
+            SetOperation.Union,
+            KEY_RANDOM_PHOTO_CANDIDATES,
+            photoSetKeys.Select(k => new RedisKey(k)).ToArray()
+        );
+
+        var randomKeys = tran.SetRandomMembersAsync(KEY_RANDOM_PHOTO_CANDIDATES, count);
+
+        await tran.ExecuteAsync();
+
+        tran = db.CreateTransaction();
+
+        foreach(var photoKey in await randomKeys)
+        {
+            tran.SetAddAsync(KEY_RANDOM_PHOTOS, photoKey);
+        }
+
+        var randomPhotos = tran.SortAsync(
+            KEY_RANDOM_PHOTOS,
+            get: new RedisValue[] {
+                BuildPhotoSortFieldLookup(KEY_PHOTO_ID),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_CATEGORY_ID),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_CREATE_DATE),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_LATITUDE),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_LONGITUDE),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_XS_HEIGHT),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_XS_WIDTH),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_XS_PATH),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_XS_SIZE),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_XS_SQ_HEIGHT),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_XS_SQ_WIDTH),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_XS_SQ_PATH),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_XS_SQ_SIZE),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_SM_HEIGHT),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_SM_WIDTH),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_SM_PATH),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_SM_SIZE),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_MD_HEIGHT),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_MD_WIDTH),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_MD_PATH),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_MD_SIZE),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_LG_HEIGHT),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_LG_WIDTH),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_LG_PATH),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_LG_SIZE),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_PRT_HEIGHT),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_PRT_WIDTH),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_PRT_PATH),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_PRT_SIZE),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_SRC_HEIGHT),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_SRC_WIDTH),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_SRC_PATH),
+                BuildPhotoSortFieldLookup(KEY_PHOTO_SRC_SIZE)
+            }
+        );
+
+        await tran.ExecuteAsync();
+
+        return BuildPhotos(await randomPhotos);
     }
 
     async Task<bool> CanAccessCategoryAsync(short categoryId, string[] roles)

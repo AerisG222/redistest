@@ -39,6 +39,23 @@ public class PhotoRepository
         return InternalGetPhotosAsync(roles, categoryId);
     }
 
+    public Task<IEnumerable<Photo>> GetRandomAsync(byte count, string[] roles)
+    {
+        return RunAsync(async conn =>
+        {
+            var rows = await conn.QueryAsync(
+                "SELECT * FROM photo.get_random_photos(@roles, @count)",
+                new
+                {
+                    roles,
+                    count
+                }
+            ).ConfigureAwait(false);
+
+            return rows.Select(BuildPhoto);
+        });
+    }
+
     Task<IEnumerable<Category>> InternalGetCategoriesAsync(string[] roles, short? year = null, short? categoryId = null, short? sinceCategoryId = null)
     {
         return RunAsync(async conn =>
