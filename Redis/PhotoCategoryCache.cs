@@ -77,6 +77,35 @@ public class PhotoCategoryCache
         _redis = ConnectionMultiplexer.Connect(connString);
     }
 
+    public async Task FlushDb()
+    {
+        await _redis.GetServer("localhost:6379").FlushAllDatabasesAsync();
+    }
+
+    public async Task BulkAddPhotoPerformanceTestAsync(List<Photo> photos, int batchSize)
+    {
+        var db = _redis.GetDatabase();
+        var totalCount = photos.Count;
+        var saved = 0;
+
+        while(saved < totalCount)
+        {
+            var tran = db.CreateTransaction();
+
+            for(var idx = 0; idx < batchSize && (idx + saved) < totalCount; idx++)
+            {
+                var photo = photos[idx];
+
+                tran.HashSetAsync(BuildPhotoHashKey(photo.Id), GetHashEntries(photo));
+                tran.SetAddAsync(BuildCategoryPhotosSetKey(photo.CategoryId), photo.Id);
+
+                saved++;
+            }
+
+            await tran.ExecuteAsync();
+        }
+    }
+
     public async Task SetCategoriesAsync(IEnumerable<Category> categories, IEnumerable<CategoryRole> categoryRoles)
     {
         var db = _redis.GetDatabase();
