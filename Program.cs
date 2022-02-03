@@ -1,4 +1,5 @@
 ﻿using BenchmarkDotNet.Running;
+using redistest.Benchmarks;
 using redistest.Redis;
 using redistest.Sql;
 
@@ -36,6 +37,7 @@ public class Program
         Console.WriteLine("adding photos to redis...");
         await redis.SetPhotosAsync(photos, categoryRoles);
 
+        /*
         Console.WriteLine("test of getting first 10 categories from redis:");
         var redisCategories = await redis.GetCategoriesAsync(new[] {"friend", "demo"});
 
@@ -68,6 +70,9 @@ public class Program
         {
             var summary = BenchmarkRunner.Run(typeof(Program).Assembly);
         }
+        */
+
+        BenchmarkRunner.Run<UnionVsMultipleIsMember>();
     }
 
     async Task<IEnumerable<Photo>> GetPhotosAsync(IEnumerable<Category> categories, string[] roles)

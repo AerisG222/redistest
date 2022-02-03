@@ -366,6 +366,37 @@ public class PhotoCategoryCache
         return BuildPhotos(await randomPhotos);
     }
 
+    public async Task<bool> CanAccessViaUnion(short categoryId, string[] roles)
+    {
+        return await CanAccessCategoryAsync(categoryId, roles);
+    }
+
+    public async Task<bool> CanAccessViaMultipleIsMember(short categoryId, string[] roles)
+    {
+        var db = _redis.GetDatabase();
+        var tran = db.CreateTransaction();
+        var allChecks = new List<Task<bool>>();
+
+        foreach(var role in roles)
+        {
+            allChecks.Add(tran.SetContainsAsync(BuildRoleSetKey(role), categoryId));
+        }
+
+        await tran.ExecuteAsync();
+
+        foreach(var check in allChecks)
+        {
+            var hasAccess = await check;
+
+            if(hasAccess)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     async Task<bool> CanAccessCategoryAsync(short categoryId, string[] roles)
     {
         var db = _redis.GetDatabase();
@@ -377,6 +408,7 @@ public class PhotoCategoryCache
 
         return await canAccess;
     }
+
 
     Task<string> PrepareAccessibleCategoriesSetAsync(ITransaction tran, string[] roles)
     {
